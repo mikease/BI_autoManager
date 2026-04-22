@@ -26,4 +26,4 @@ jobs:
           BILI_JCT: ${{ secrets.BILI_JCT }}
           BILI_USERID: ${{ secrets.BILI_USERID }}
           PUSHPLUS_TOKEN: ${{ secrets.PUSHPLUS_TOKEN }}
-        run: python main.py
+        run: python test3.py
