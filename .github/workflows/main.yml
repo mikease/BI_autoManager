@@ -1,0 +1,29 @@
+name: BiliBili Daily Task
+
+on:
+  workflow_dispatch: # 手动触发运行
+  schedule:
+    - cron: '0 1 * * *' # 每天北京时间 09:00 自动运行
+
+jobs:
+  run-task:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Run script
+        env:
+          BILI_SESSDATA: ${{ secrets.BILI_SESSDATA }}
+          BILI_JCT: ${{ secrets.BILI_JCT }}
+          BILI_USERID: ${{ secrets.BILI_USERID }}
+          PUSHPLUS_TOKEN: ${{ secrets.PUSHPLUS_TOKEN }}
+        run: python main.py
