@@ -3,13 +3,15 @@ import random
 import time
 import datetime
 import re
+import os
 
 # ==================== 配置部分 ====================
 COOKIES = {
-    'SESSDATA': 'dc66cee4%2C1792393424%2Cff1b2%2A41CjANMELNyzbZzbhYius6PpDiQx9hHX3GGkC9GiQZaM_DvGnJAkTjdc-BE4HG3tijH_0SVm5VY0hiZVZrVkQ2bW9xZkE2SUF0YVJRRmktcEJMdWl3OXk2WkgtZW5sazFqcFRJV2hXcklicXFGWHlLY1ROVXNLT3BhbHpOZTFxWXVoeHlCY05Vcl9RIIEC',
-    'bili_jct': 'f6d738c1ea34489c23de4bccd53280c2',
-    'DedeUserID': '189738098'
+    'SESSDATA': os.environ.get('BILI_SESSDATA'),
+    'bili_jct': os.environ.get('BILI_JCT'),
+    'DedeUserID': os.environ.get('BILI_USERID')
 }
+
 CSRF = COOKIES['bili_jct']
 
 HEADERS = {
