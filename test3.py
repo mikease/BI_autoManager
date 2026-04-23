@@ -11,7 +11,7 @@ COOKIES = {
     'bili_jct': os.environ.get('BILI_JCT'),
     'DedeUserID': os.environ.get('BILI_USERID')
 }
-PUSHPLUS_TOKEN = os.environ.get('PUSHPLUS_TOKEN') # 添加 PushPlus Token 环境变量
+PUSHPLUS_TOKEN = os.environ.get('PUSHPLUS_TOKEN') 
 
 CSRF = COOKIES['bili_jct']
 
@@ -30,7 +30,7 @@ def logger(msg):
     print(msg)
     log_content.append(str(msg))
 
-# ==================== 新增：PushPlus 推送函数 ====================
+# ==================== PushPlus 推送函数 ====================
 
 def send_pushplus(content):
     """发送日志到微信"""
@@ -42,7 +42,7 @@ def send_pushplus(content):
     data = {
         "token": PUSHPLUS_TOKEN,
         "title": f"B站每日任务报告 - {datetime.datetime.now().strftime('%m-%d')}",
-        "content": content.replace("\n", "<br>"),  # 换行转为网页标签
+        "content": content.replace("\n", "<br>"),  
         "template": "html"
     }
     try:
@@ -51,11 +51,16 @@ def send_pushplus(content):
     except Exception as e:
         print(f"\n[通知] 发送失败: {e}")
 
-# ==================== 功能模块 (保持不动) ====================
+# ==================== 功能模块 ====================
 
 def check_task_status(label="实时"):
+    """
+    修改点：确保获取的数据准确后再进行 logger 记录
+    """
     url = "https://api.bilibili.com/x/member/web/exp/reward"
     try:
+        # 增加极小延迟防止请求过快
+        time.sleep(1)
         res = requests.get(url, cookies=COOKIES, headers=HEADERS, timeout=10).json()
         if res['code'] == 0:
             data = res['data']
@@ -66,11 +71,14 @@ def check_task_status(label="实时"):
                 {"name": "每日分享视频", "ok": data['share'], "info": "5经验值"}
             ]
             
-            logger(f"\n{'='*10} 任务看板 [{label}] {'='*10}")
+            # 先构建出完整的看板字符串，再一次性交由 logger 处理，防止并发打印错乱
+            board = f"\n{'='*10} 任务看板 [{label}] {'='*10}\n"
             for s in status_list:
                 icon = "✅ [已完成]" if s['ok'] else "❌ [未完成]"
-                logger(f"{icon} {s['name']}: {s['info']}")
-            logger(f"{'='*33}\n")
+                board += f"{icon} {s['name']}: {s['info']}\n"
+            board += f"{'='*33}\n"
+            
+            logger(board)
             return data
     except Exception as e:
         logger(f"[提示] 无法获取任务看板数据: {e}")
@@ -98,7 +106,7 @@ def get_needed_coins():
             logger(f"[状态] 今日已获投币经验: {already_coins}, 还需投币: {needed} 个")
             return needed
     except:
-        logger("[提示] 无法精确获取投币进度，执行默认策略")
+        logger("[提示] 无法获取投币进度，执行默认策略")
     return 5
 
 def get_hot_videos():
@@ -112,25 +120,25 @@ def get_hot_videos():
     return []
 
 def watch_and_share(aid):
-    """4. 模拟观看与分享 (优化版：增加间隔确保同时完成)"""
-    # 1. 模拟观看心跳
+    """4. 模拟观看与分享 (优化心跳逻辑)"""
     # 发送起始心跳
     requests.post("https://api.bilibili.com/x/click-interface/web/heartbeat", 
                   data={'aid': aid, 'played_time': 0, 'csrf': CSRF},
                   cookies=COOKIES, headers=HEADERS)
     
-    # 模拟观看了一段时间
-    play_time = random.randint(15, 45)
+    # 模拟观看时长
+    play_time = random.randint(15, 30)
+    time.sleep(2) # 接口缓冲
+    
     requests.post("https://api.bilibili.com/x/click-interface/web/heartbeat", 
                   data={'aid': aid, 'played_time': play_time, 'csrf': CSRF},
                   cookies=COOKIES, headers=HEADERS)
     
-    logger(f"[任务] 视频 AID:{aid} 模拟观看 {play_time}秒")
+    logger(f"[任务] 视频 AID:{aid} 模拟观看完毕")
 
-    # --- 关键点：在观看和分享之间强制等待 5 秒 ---
-    time.sleep(5) 
+    # 分享前强制等待，防止频率过快导致分享失败
+    time.sleep(4) 
 
-    # 2. 执行分享
     share_resp = requests.post("https://api.bilibili.com/x/web-interface/share/add",
                   data={'aid': aid, 'csrf': CSRF},
                   cookies=COOKIES, headers=HEADERS).json()
@@ -138,7 +146,8 @@ def watch_and_share(aid):
     if share_resp['code'] == 0:
         logger(f"[任务] 视频 AID:{aid} 分享成功")
     else:
-        logger(f"[任务] 视频 AID:{aid} 分享失败: {share_resp['message']}")
+        logger(f"[任务] 视频 AID:{aid} 分享跳过: {share_resp['message']}")
+
 def coin_video(aid):
     url = "https://api.bilibili.com/x/web-interface/coin/add"
     data = {'aid': aid, 'multiply': 1, 'select_like': 1, 'csrf': CSRF}
@@ -158,9 +167,8 @@ def coin_video(aid):
 def main():
     logger(f"--- Bilibili 综合任务启动 [{datetime.datetime.now().strftime('%H:%M:%S')}] ---")
     
-    
     if not daily_login():
-        send_pushplus("\n".join(log_content)) # 登录失败也通知
+        send_pushplus("\n".join(log_content)) 
         return
 
     logger("正在检查初始任务进度...")
@@ -172,9 +180,11 @@ def main():
         send_pushplus("\n".join(log_content))
         return
 
+    # 1. 执行观看与分享
     watch_and_share(videos[0]['aid'])
     time.sleep(2)
 
+    # 2. 执行动态投币
     needed = get_needed_coins()
     if needed > 0:
         candidates = random.sample(videos[1:], min(needed + 2, len(videos)-1))
@@ -189,13 +199,15 @@ def main():
     else:
         logger("[状态] 投币经验已达上限，跳过投币任务。")
 
-    logger("\n任务执行完毕，正在刷新最终进度...")
-    time.sleep(3)
+    # 3. 关键改动：加长同步等待时间
+    logger("\n任务执行完毕，等待 10 秒确保服务器同步状态...")
+    time.sleep(10) 
+    
     check_task_status("运行后")
     
     logger(f"--- 任务全部结束 [{datetime.datetime.now().strftime('%H:%M:%S')}] ---")
     
-    # 最终汇总发送
+    # 最终发送汇总通知
     send_pushplus("\n".join(log_content))
 
 if __name__ == "__main__":
