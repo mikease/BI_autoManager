@@ -112,14 +112,33 @@ def get_hot_videos():
     return []
 
 def watch_and_share(aid):
+    """4. 模拟观看与分享 (优化版：增加间隔确保同时完成)"""
+    # 1. 模拟观看心跳
+    # 发送起始心跳
     requests.post("https://api.bilibili.com/x/click-interface/web/heartbeat", 
-                  data={'aid': aid, 'played_time': random.randint(30, 90), 'csrf': CSRF},
+                  data={'aid': aid, 'played_time': 0, 'csrf': CSRF},
                   cookies=COOKIES, headers=HEADERS)
-    requests.post("https://api.bilibili.com/x/web-interface/share/add",
-                  data={'aid': aid, 'csrf': CSRF},
+    
+    # 模拟观看了一段时间
+    play_time = random.randint(15, 45)
+    requests.post("https://api.bilibili.com/x/click-interface/web/heartbeat", 
+                  data={'aid': aid, 'played_time': play_time, 'csrf': CSRF},
                   cookies=COOKIES, headers=HEADERS)
-    logger(f"[任务] 视频 AID:{aid} 模拟观看与分享指令已发送")
+    
+    logger(f"[任务] 视频 AID:{aid} 模拟观看 {play_time}秒")
 
+    # --- 关键点：在观看和分享之间强制等待 5 秒 ---
+    time.sleep(5) 
+
+    # 2. 执行分享
+    share_resp = requests.post("https://api.bilibili.com/x/web-interface/share/add",
+                  data={'aid': aid, 'csrf': CSRF},
+                  cookies=COOKIES, headers=HEADERS).json()
+    
+    if share_resp['code'] == 0:
+        logger(f"[任务] 视频 AID:{aid} 分享成功")
+    else:
+        logger(f"[任务] 视频 AID:{aid} 分享失败: {share_resp['message']}")
 def coin_video(aid):
     url = "https://api.bilibili.com/x/web-interface/coin/add"
     data = {'aid': aid, 'multiply': 1, 'select_like': 1, 'csrf': CSRF}
@@ -138,6 +157,7 @@ def coin_video(aid):
 
 def main():
     logger(f"--- Bilibili 综合任务启动 [{datetime.datetime.now().strftime('%H:%M:%S')}] ---")
+    
     
     if not daily_login():
         send_pushplus("\n".join(log_content)) # 登录失败也通知
