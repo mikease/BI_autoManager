@@ -107,7 +107,7 @@ def get_needed_coins():
             return needed
     except:
         logger("[提示] 无法获取投币进度，执行默认策略")
-    return 5
+    return 0
 
 def get_hot_videos():
     url = "https://api.bilibili.com/x/web-interface/popular"
