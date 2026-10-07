@@ -36,21 +36,32 @@ jobs:
           PUSHPLUS_TOKEN: ${{ secrets.PUSHPLUS_TOKEN }}
         run: python test3.py
 
-      - name: Auto-Keepalive & Commit Monthly Ops Record
+      - name: Monthly Keepalive (Prevent 60-day GitHub sleep)
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          
+          # 1. 提交月度运维健康巡检档案（如发生变动）
           if [ -f ".github/ops-status.json" ]; then
             git add .github/ops-status.json
-            if ! git diff --cached --quiet; then
-              git commit -m "chore(ops): update monthly health check & keepalive [skip ci]"
-              git push origin main
-            fi
           fi
-
-      - name: Keepalive Fallback
-        uses: gautamkrishnar/keepalive-workflow@v2
-        with:
-          committer_username: github-actions[bot]
-          committer_email: 41898282+github-actions[bot]@users.noreply.github.com
-          commit_message: "chore(ops): keepalive workflow active [skip ci]"
+          
+          # 2. 检查距离上次提交的天数，超过 40 天或每月 1 号自动刷新保活记录
+          LAST_COMMIT_TIME=$(git log -1 --format=%ct)
+          CURRENT_TIME=$(date +%s)
+          DAYS_SINCE=$(( (CURRENT_TIME - LAST_COMMIT_TIME) / 86400 ))
+          echo "距上次提交已过去: ${DAYS_SINCE} 天"
+          
+          if [ ${DAYS_SINCE} -ge 40 ] || [ $(date +%d) -eq 01 ] || [ ! -f ".keepalive" ]; then
+            echo "触发自动保活机制，生成月度活跃标记..."
+            date -u +"%Y-%m-%d %H:%M:%S UTC" > .keepalive
+            git add .keepalive
+          fi
+          
+          if ! git diff --cached --quiet; then
+            git commit -m "chore(ops): monthly automated maintenance & keepalive [skip ci]"
+            git push origin main
+            echo "已成功提交月度运维与保活记录，GitHub 60天定时任务倒计时已重置！"
+          else
+            echo "本周期档案无变更且未达保活阈值，跳过提交。"
+          fi
