@@ -1,0 +1,20 @@
+{
+  "month": "2026-10",
+  "last_audit_at": "2026-10-07 08:06:23",
+  "status": "healthy",
+  "user": {
+    "uname": "舒峖",
+    "mid": 189738098,
+    "level": 6,
+    "current_exp": 30900,
+    "next_exp": "--",
+    "money": 593
+  },
+  "tasks_policy": {
+    "daily_login": "enabled",
+    "daily_watch": "enabled",
+    "daily_share": "enabled",
+    "daily_coin": "disabled_by_user_request"
+  },
+  "keepalive_protection": "active"
+}
