@@ -5,12 +5,17 @@ on:
   schedule:
     - cron: '0 1 * * *' # 每天北京时间 09:00 (UTC 01:00) 自动运行
 
+permissions:
+  contents: write
+
 jobs:
   run-task:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -30,3 +35,22 @@ jobs:
           BILI_USERID: ${{ secrets.BILI_USERID }}
           PUSHPLUS_TOKEN: ${{ secrets.PUSHPLUS_TOKEN }}
         run: python test3.py
+
+      - name: Auto-Keepalive & Commit Monthly Ops Record
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if [ -f ".github/ops-status.json" ]; then
+            git add .github/ops-status.json
+            if ! git diff --cached --quiet; then
+              git commit -m "chore(ops): update monthly health check & keepalive [skip ci]"
+              git push origin main
+            fi
+          fi
+
+      - name: Keepalive Fallback
+        uses: gautamkrishnar/keepalive-workflow@v2
+        with:
+          committer_username: github-actions[bot]
+          committer_email: 41898282+github-actions[bot]@users.noreply.github.com
+          commit_message: "chore(ops): keepalive workflow active [skip ci]"
