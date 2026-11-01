@@ -1,14 +1,14 @@
 {
-  "month": "2026-10",
-  "last_audit_at": "2026-10-07 08:06:23",
+  "month": "2026-11",
+  "last_audit_at": "2026-11-01 06:57:47",
   "status": "healthy",
   "user": {
     "uname": "舒峖",
     "mid": 189738098,
     "level": 6,
-    "current_exp": 30900,
+    "current_exp": 31185,
     "next_exp": "--",
-    "money": 593
+    "money": 617
   },
   "tasks_policy": {
     "daily_login": "enabled",
